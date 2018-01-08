@@ -12,7 +12,6 @@
     </bean>
 
 
-
     <!--
     ActiveMQ为我们提供了一个PooledConnectionFactory,通过往里面注入一个ActiveMQConnectionFactory
     可以用来将Connection、Session和MessageProducer池化，这样可以大大减少资源消耗
@@ -22,7 +21,6 @@
         <property name="connectionFactory" ref="targetConnectionFactory"/>
         <property name="maxConnections" value="${mq.pool.maxConnections}"/>
     </bean>
-
 
 
 
@@ -41,5 +39,73 @@
         <property name="connectionFactory" ref="connectionFactory"/>
         <!-- 要将消息发送到哪个队列中 -->
         <property name="defaultDestinationName" value="${queueName}"/>
+    </bean>
+
+    <!-- 以上是异步发送邮件的配置 -->
+
+
+
+
+    <!-- 测试MQ的三种消息监听器之MessageListener 的消息producer的配置 -->
+    <bean id="amqJMSTemplate_01" class="org.springframework.jms.core.JmsTemplate">
+        <property name="connectionFactory" ref="connectionFactory"/>
+        <property name="defaultDestinationName" value="${messageListenerQueueName}"/>
+    </bean>
+
+
+
+
+
+    <!-- 测试MQ的三种消息监听器之SessionAwareMessageListener 的消息producer的配置 -->
+    <bean id="amqJMSTemplate_02" class="org.springframework.jms.core.JmsTemplate">
+        <property name="connectionFactory" ref="connectionFactory"/>
+        <property name="defaultDestinationName" value="${sessionAwareMessageListenerQueueName}"/>
+    </bean>
+    <!-- SessionAwareMessageListener是Spring提供的一种MessageListener,
+    其功能特点就是可以在收到消息之后再去通知消息的生产者，
+    所以在produce这边，我们还要配置一个消息监听器和监听容器，
+    用以接收消费端收到消息后的通知-->
+    <!-- 回调消息队列（消息回调目的地） -->
+    <bean id="callBackQueueDestination" class="org.apache.activemq.command.ActiveMQQueue">
+        <constructor-arg>
+            <value>${callBackQueueName}</value>
+        </constructor-arg>
+    </bean>
+
+    <!-- 配置消息监听器 -->
+    <bean id="callBackMessageListener" class="com.amq.producer.impl.SessionAwareMessageListenerTest.CallBackMessageListener"/>
+
+    <!-- 配置消息监听容器 -->
+    <bean id="callBackListenerContainer" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+        <property name="connectionFactory" ref="connectionFactory"/>
+        <property name="messageListener" ref="callBackMessageListener"/>
+        <property name="destination" ref="callBackQueueDestination"/>
+    </bean>
+
+
+
+
+    <!-- 测试MQ的三种消息监听器之MessageListenerAdapter 的消息producer的配置 -->
+    <bean id="messageListenerAdapterTestDestination" class="org.apache.activemq.command.ActiveMQQueue">
+        <constructor-arg>
+            <value>${MessageListenerAdapterQueueName}</value>
+        </constructor-arg>
+    </bean>
+    <bean id="amqJMSTemplate_03" class="org.springframework.jms.core.JmsTemplate">
+        <property name="connectionFactory" ref="connectionFactory"/>
+        <property name="defaultDestinationName" value="${MessageListenerAdapterQueueName}"/>
+    </bean>
+    <!-- MessageListenerAdapter消息回调队列 -->
+    <bean id="adapterCallBackDestination" class="org.apache.activemq.command.ActiveMQQueue">
+        <constructor-arg>
+            <value>${adapterCallBackQueueName}</value>
+        </constructor-arg>
+    </bean>
+    <bean id="mladapterCallbackListener" class="com.amq.producer.impl.MessageListenerAdapterTest.AdapterCallBackMessageListener"/>
+
+    <bean id="mladapterCallBackContainer" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+        <property name="destination" ref="adapterCallBackDestination"/>
+        <property name="connectionFactory" ref="connectionFactory"/>
+        <property name="messageListener" ref="mladapterCallbackListener"/>
     </bean>
 </beans>
